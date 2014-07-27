@@ -1,0 +1,75 @@
+---
+title: "Machine Learning Project"
+author: "Xiaozheng Song"
+date: "Sunday, July 27, 2014"
+output: html_document
+---
+
+
+### Summary
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. The task of the research was to predict how well subjects performed weigh lifting excercises based on data collected form accelerometers attached to the person performing the exercises. 
+
+### Data and more information
+
+The training data for this project are available here: 
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here: 
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+More information is available from the website here: 
+http://groupware.les.inf.puc-rio.br/har 
+
+### Load and clean Data
+Read data
+```{r}
+setwd("C:/Users/leo/Desktop/stat/DS training/Practical Machine Learning")
+testBulk <- read.csv("pml-testing.csv",na.strings=c("NA",""))
+trainBulk <- read.csv("pml-training.csv",na.strings=c("NA",""))
+```
+Handle missing value
+```{r}
+NAs <- apply(trainBulk,2,function(x) {sum(is.na(x))})
+cleanTrain <- trainBulk[,which(NAs == 0)]
+cleanTest <- testBulk[,which(NAs == 0)]
+```
+
+### Building data sets for training and cross validation.
+Using 70% for training and 30% for Cross Validation. None generated for testing since that set is already provided.
+```{r}
+library(ggplot2)
+library(lattice)
+library(caret)
+trainIndex <- createDataPartition(y = cleanTrain$classe, p=0.7,list=FALSE)
+trainSet <- cleanTrain[trainIndex,]
+crossValidationSet <- cleanTrain[-trainIndex,]
+```
+Removing irrelevant variables 
+```{r}
+removeIndex <- as.integer(c(1,2,3,4,5,6))
+trainSet <- trainSet[,-removeIndex]
+testSet <- cleanTest[,-removeIndex]
+```
+
+## Training
+```{r}
+mytrControl = trainControl(method = "cv", number = 4)
+modelFit <- train(trainSet$classe ~.,data = trainSet, method="rf", trControl = mytrControl)
+modelFit
+```
+
+
+## Calculation the errors using the Cross Validation Set.
+```{r}
+predicted <- predict(modelFit, crossValidationSet)
+SampleError <- sum(predicted == crossValidationSet$classe)/nrow(crossValidationSet)
+SampleError
+```
+So the Out of Sample Error we get is: `r SampleError`
+
+
+## Generating data for the prediction vector for the Assigment Submission
+```{r}
+answers <- predict(modelFit, testSet)
+answers
+```
